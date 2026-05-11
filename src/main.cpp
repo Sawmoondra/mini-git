@@ -1,26 +1,35 @@
 #include <iostream>
 #include "Utils.h"
 #include "FileSnapshot.h"
+#include "Commit.h"
 
 using namespace std;
 
 int main() {
-    // Create a test file to snapshot
-    Utils::writeFile("test.txt", "hello from mini-git!\n");
+    // Create and snapshot a test file
+    Utils::writeFile("hello.txt", "hello from mini-git!\n");
+    Utils::writeFile("world.txt", "world file content\n");
 
-    // Take a snapshot of it
-    FileSnapshot snap("test.txt");
+    FileSnapshot snap1("hello.txt");
+    FileSnapshot snap2("world.txt");
 
-    cout << "File: " << snap.getFilename() << "\n";
-    cout << "Hash: " << snap.getContentHash() << "\n";
-    cout << "Content: " << snap.getContent();
+    snap1.save(".minigit");
+    snap2.save(".minigit");
 
-    // Save it to .minigit/objects/
-    snap.save(".minigit");
+    // Build file map
+    map<string, string> files;
+    files[snap1.getFilename()] = snap1.getContentHash();
+    files[snap2.getFilename()] = snap2.getContentHash();
 
-    // Load it back using the hash
-    string loaded = FileSnapshot::loadContent(".minigit", snap.getContentHash());
-    cout << "Loaded back: " << loaded;
+    // Create a commit
+    Commit c("first commit", "", files);
+    c.save(".minigit");
+    c.print();
+
+    // Load it back
+    cout << "--- Loading commit back ---\n";
+    Commit loaded = Commit::load(".minigit", c.getCommitHash());
+    loaded.print();
 
     return 0;
 }
