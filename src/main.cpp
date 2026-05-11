@@ -1,17 +1,26 @@
 #include <iostream>
 #include "Utils.h"
+#include "FileSnapshot.h"
 
 using namespace std;
 
 int main() {
-    string content = "hello world";
-    string hash = Utils::hashString(content);
-    cout << "Hash of 'hello world': " << hash << "\n";
+    // Create a test file to snapshot
+    Utils::writeFile("test.txt", "hello from mini-git!\n");
 
-    Utils::writeFile("test.txt", "testing file write\n");
-    string read = Utils::readFile("test.txt");
-    cout << "Read back: " << read;
+    // Take a snapshot of it
+    FileSnapshot snap("test.txt");
 
-    cout << "Time: " << Utils::getCurrentTimestamp() << "\n";
+    cout << "File: " << snap.getFilename() << "\n";
+    cout << "Hash: " << snap.getContentHash() << "\n";
+    cout << "Content: " << snap.getContent();
+
+    // Save it to .minigit/objects/
+    snap.save(".minigit");
+
+    // Load it back using the hash
+    string loaded = FileSnapshot::loadContent(".minigit", snap.getContentHash());
+    cout << "Loaded back: " << loaded;
+
     return 0;
 }
