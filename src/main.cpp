@@ -1,35 +1,39 @@
 #include <iostream>
-#include "Utils.h"
-#include "FileSnapshot.h"
-#include "Commit.h"
+#include "Repository.h"
 
 using namespace std;
 
 int main() {
-    // Create and snapshot a test file
-    Utils::writeFile("hello.txt", "hello from mini-git!\n");
-    Utils::writeFile("world.txt", "world file content\n");
+    Repository repo(".");
 
-    FileSnapshot snap1("hello.txt");
-    FileSnapshot snap2("world.txt");
+    // 1. Init
+    repo.init();
 
-    snap1.save(".minigit");
-    snap2.save(".minigit");
+    // 2. Create some files
+    Utils::writeFile("file1.txt", "Hello from file1!\n");
+    Utils::writeFile("file2.txt", "Hello from file2!\n");
 
-    // Build file map
-    map<string, string> files;
-    files[snap1.getFilename()] = snap1.getContentHash();
-    files[snap2.getFilename()] = snap2.getContentHash();
+    // 3. Add and commit
+    repo.add("file1.txt");
+    repo.add("file2.txt");
+    repo.status();
+    repo.commit("first commit");
 
-    // Create a commit
-    Commit c("first commit", "", files);
-    c.save(".minigit");
-    c.print();
+    // 4. Modify a file and make second commit
+    Utils::writeFile("file1.txt", "file1 has been modified!\n");
+    repo.add("file1.txt");
+    repo.commit("second commit - modified file1");
 
-    // Load it back
-    cout << "--- Loading commit back ---\n";
-    Commit loaded = Commit::load(".minigit", c.getCommitHash());
-    loaded.print();
+    // 5. Show history
+    repo.log();
+
+    // 6. Restore first commit
+string firstCommit = "a141d214";  // copy your actual first commit hash
+repo.restore(firstCommit);
+
+// 7. Verify file1.txt was restored
+string content = Utils::readFile("file1.txt");
+cout << "file1.txt after restore: " << content;
 
     return 0;
 }

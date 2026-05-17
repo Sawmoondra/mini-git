@@ -5,18 +5,24 @@
 
 using namespace std;
 
+static string trim(const string& s) {
+    size_t start = s.find_first_not_of(" \r\n\t");
+    size_t end   = s.find_last_not_of(" \r\n\t");
+    if (start == string::npos) return "";
+    return s.substr(start, end - start + 1);
+}
+
 Commit::Commit(const string& msg,
                const string& parent,
                const map<string, string>& fileMap) {
     message    = msg;
-    parentHash = parent;
+    parentHash = trim(parent);
     files      = fileMap;
     timestamp  = Utils::getCurrentTimestamp();
 
     string raw = message + timestamp + parentHash;
-    for (const auto& pair : files) {
+    for (const auto& pair : files)
         raw += pair.first + pair.second;
-    }
     commitHash = Utils::hashString(raw);
 }
 
@@ -26,42 +32,36 @@ bool Commit::save(const string& repoPath) {
     ss << "message:"   << message    << "\n";
     ss << "timestamp:" << timestamp  << "\n";
     ss << "parent:"    << parentHash << "\n";
-    for (const auto& pair : files) {
+    for (const auto& pair : files)
         ss << "file:" << pair.first << ":" << pair.second << "\n";
-    }
-    string commitPath = repoPath + "/commits/" + commitHash;
-    Utils::writeFile(commitPath, ss.str());
+
+    Utils::writeFile(repoPath + "/commits/" + commitHash, ss.str());
     cout << "Commit saved: " << commitHash << "\n";
     return true;
 }
 
 Commit Commit::load(const string& repoPath, const string& hash) {
-    string commitPath = repoPath + "/commits/" + hash;
-    string data = Utils::readFile(commitPath);
+    string data = Utils::readFile(repoPath + "/commits/" + trim(hash));
 
-    string loadedMsg, loadedParent;
-    map<string, string> loadedFiles;
+    string msg, parent;
+    map<string, string> fileMap;
     stringstream ss(data);
     string line;
 
     while (getline(ss, line)) {
+        line = trim(line);
         if (line.rfind("message:", 0) == 0)
-            loadedMsg = line.substr(8);
+            msg = trim(line.substr(8));
         else if (line.rfind("parent:", 0) == 0)
-            loadedParent = line.substr(7);
+            parent = trim(line.substr(7));
         else if (line.rfind("file:", 0) == 0) {
             string rest = line.substr(5);
             size_t colon = rest.find(':');
-            if (colon != string::npos) {
-                string fname = rest.substr(0, colon);
-                string fhash = rest.substr(colon + 1);
-                // trim any trailing whitespace or \r
-                fhash.erase(fhash.find_last_not_of(" \r\n") + 1);
-                loadedFiles[fname] = fhash;
-            }
+            if (colon != string::npos)
+                fileMap[trim(rest.substr(0, colon))] = trim(rest.substr(colon + 1));
         }
     }
-    return Commit(loadedMsg, loadedParent, loadedFiles);
+    return Commit(msg, parent, fileMap);
 }
 
 string Commit::getCommitHash() const { return commitHash; }
@@ -75,8 +75,7 @@ void Commit::print() const {
     cout << "Date:   " << timestamp << "\n";
     cout << "        " << message   << "\n";
     cout << "\nFiles:\n";
-    for (const auto& pair : files) {
+    for (const auto& pair : files)
         cout << "  " << pair.first << " -> " << pair.second << "\n";
-    }
     cout << "\n";
 }
